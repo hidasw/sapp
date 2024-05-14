@@ -29,6 +29,8 @@ class CMS {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_HEADER, 1);
+    curl_setopt($ch,CURLOPT_SSL_VERIFYHOST,0);
+    curl_setopt($ch,CURLOPT_SSL_VERIFYPEER,0);
     curl_setopt($ch, CURLOPT_HTTPHEADER, array("Content-Type: {$reqData['req_contentType']}",'User-Agent: SAPP PDF'));
     curl_setopt($ch, CURLOPT_POSTFIELDS, $reqData['data']);
     if (($reqData['user'] ?? null) && ($reqData['password'] ?? null)) {
