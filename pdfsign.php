@@ -45,6 +45,7 @@ else {
             if (!$obj->set_signature_certificate($argv[2], $password)) {
                 fwrite(STDERR, "the certificate is not valid");
             } else {
+                define('__SIGNATURE_MAX_LENGTH', 20000);
                 $docsigned = $obj->to_pdf_file_s();
                 if ($docsigned === false)
                     fwrite(STDERR, "could not sign the document");

@@ -62,6 +62,7 @@ else {
                     $obj->set_tsa($tsa);
                 }
                 $obj->set_ltv();
+                define('__SIGNATURE_MAX_LENGTH', 20000);
                 $docsigned = $obj->to_pdf_file_s();
                 if ($docsigned === false)
                     fwrite(STDERR, "could not sign the document");

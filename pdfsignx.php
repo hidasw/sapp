@@ -47,6 +47,7 @@ else {
             if ($signedDoc === false) {
                 fwrite(STDERR, "failed to sign the document");
             } else {
+                define('__SIGNATURE_MAX_LENGTH', 20000);
                 $docsigned = $signedDoc->to_pdf_file_s();
                 if ($docsigned === false)
                     fwrite(STDERR, "could not sign the document");
