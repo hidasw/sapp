@@ -453,20 +453,23 @@ class PDFDoc extends Buffer {
         // Prepare the signature object (we need references to it)
         $signature = null;
         if ($this->_certificate !== null) {
-            // Perform signature test to get signature size to define __SIGNATURE_MAX_LENGTH
-            p_debug("     ########## PERFORM SIGNATURE LENGTH CHECK ##########\n");
-            $CMS = new helpers\CMS;
-            $CMS->signature_data['signcert'] = $this->_certificate['cert'];
-            $CMS->signature_data['extracerts'] = $this->_certificate['extracerts']??null;
-            $CMS->signature_data['hashAlgorithm'] = 'sha256';
-            $CMS->signature_data['privkey'] = $this->_certificate['pkey'];
-            $CMS->signature_data['tsa'] = $this->_signature_tsa;
-            $CMS->signature_data['ltv'] = $this->_signature_ltv_data;
-            $res = $CMS->pkcs7_sign('0');
-            $len = strlen($res);
-            p_debug("     Signature Length is \"$len\" Bytes");
-            p_debug("     ########## FINISHED SIGNATURE LENGTH CHECK #########\n\n");
-            define('__SIGNATURE_MAX_LENGTH', $len);
+            if(!defined('__SIGNATURE_MAX_LENGTH')) {
+              // Perform signature test to get signature size to define __SIGNATURE_MAX_LENGTH
+              p_debug("     __SIGNATURE_MAX_LENGTH not defined. Perform self defined...\n");
+              p_debug("     ########## PERFORM SIGNATURE LENGTH CHECK ##########\n");
+              $CMS = new helpers\CMS;
+              $CMS->signature_data['signcert'] = $this->_certificate['cert'];
+              $CMS->signature_data['extracerts'] = $this->_certificate['extracerts']??null;
+              $CMS->signature_data['hashAlgorithm'] = 'sha256';
+              $CMS->signature_data['privkey'] = $this->_certificate['pkey'];
+              $CMS->signature_data['tsa'] = $this->_signature_tsa;
+              $CMS->signature_data['ltv'] = $this->_signature_ltv_data;
+              $res = $CMS->pkcs7_sign('0');
+              $len = strlen($res);
+              p_debug("     Signature Length is \"$len\" Bytes");
+              p_debug("     ########## FINISHED SIGNATURE LENGTH CHECK #########\n\n");
+              define('__SIGNATURE_MAX_LENGTH', $len+64);
+            }
 
             $signature = $this->create_object([], "ddn\sapp\PDFSignatureObject", false);
             //$signature = new PDFSignatureObject([]);
@@ -879,7 +882,22 @@ class PDFDoc extends Buffer {
             $cms->signature_data['signcert'] =  $certificate['cert'];
             $cms->signature_data['ltv'] = $_signature->get_ltv();
             $cms->signature_data['tsa'] = $_signature->get_tsa();
-            $signature_contents = $cms->pkcs7_sign($_signable_document->get_raw());
+            if(!$signature_contents = $cms->pkcs7_sign($_signable_document->get_raw())) {
+              p_error(" Signing FAILED!");
+              return new Buffer();
+            }
+            $signatureLength = strlen($signature_contents);
+            if($signatureLength > __SIGNATURE_MAX_LENGTH) {
+              p_error("signature length ($signatureLength) exceed __SIGNATURE_MAX_LENGTH (".__SIGNATURE_MAX_LENGTH.")!");
+              p_error("please specify more than \"$signatureLength\"!");
+              return new Buffer();
+            } else {
+              if((__SIGNATURE_MAX_LENGTH - $signatureLength) < 256) {
+                p_warning(" __SIGNATURE_MAX_LENGTH \"".__SIGNATURE_MAX_LENGTH."\" is very limited!");
+                p_warning(" recommended at least \"".(__SIGNATURE_MAX_LENGTH+256)."\"!");
+              }
+            }
+            p_debug(" Signing SUCCESS");
             $signature_contents = str_pad($signature_contents, __SIGNATURE_MAX_LENGTH, '0');
 
             // Then restore the contents field
@@ -900,6 +918,9 @@ class PDFDoc extends Buffer {
      */
     public function to_pdf_file_s($rebuild = false) {
         $pdf_content = $this->to_pdf_file_b($rebuild);
+        if(empty($pdf_content->_buffer)) {
+          return false;
+        }
         return $pdf_content->get_raw();
     }
 
