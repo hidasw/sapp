@@ -298,10 +298,10 @@ class x509 {
                 $cert['thisUpdate'] = $SingleResponseV['value'];
               }
               if($SingleResponseK == 3) {
-                $cert['nextUpdate'] = $SingleResponseV[0]['value'];
+                // $cert['nextUpdate'] = $SingleResponseV[0]['value'];
               }
               if($SingleResponseK == 4) {
-                $cert['singleExtensions'] = $SingleResponseV;
+                // $cert['singleExtensions'] = $SingleResponseV;
               }
             }
           }
@@ -444,6 +444,7 @@ class x509 {
       $derCrl = bin2hex($crl);
     }
     $curr = asn1::parse($derCrl, 7);
+    // print_r($curr);
     foreach($curr as $key=>$value) {
       if($value['type'] == '30') {
         $curr['crl']=$curr[$key];
@@ -459,6 +460,8 @@ class x509 {
       if(is_numeric($key)) {
         if($value['type'] == '30' && !array_key_exists('TBSCertList', $curr)) {
           $curr['TBSCertList']=$curr[$key];
+          // $curr['TBSCertList']['hexdump']=$value['hexdump'];
+          // print_r($value);
           unset($curr[$key]);
         }
         if($value['type'] == '30') {
@@ -511,7 +514,7 @@ class x509 {
           unset($curr[$key]);
         }
       } else {
-        unset($curr[$key]);
+        // unset($curr[$key]);
       }
     }
     $ar['crl']['TBSCertList'] = $curr;
@@ -691,6 +694,7 @@ class x509 {
     }
     $hex = bin2hex($der);
     $curr = asn1::parse($hex,10);
+    // print_r($curr);
     foreach($curr as $key=>$value) {
       if($value['type'] == '30') {
         $curr['cert']=$curr[$key];
@@ -707,6 +711,20 @@ class x509 {
         }
         if($value['type'] == '30') {
           $curr['signatureAlgorithm']=self::oidfromhex($value[0]['value_hex']);
+          // $curr['signatureAlgorithm']=($value[0]['value_hex']);
+
+          // if( $value[0]['value_hex'] == '2a8648ce3d0402' || // OBJ_ecdsa_with_Recommended
+              // $value[0]['value_hex'] == '2a8648ce3d0401' || // OBJ_ecdsa_with_SHA1
+              // $value[0]['value_hex'] == '2a8648ce3d040301' || // OBJ_ecdsa_with_SHA224
+              // $value[0]['value_hex'] == '2a8648ce3d040302' || // OBJ_ecdsa_with_SHA256
+              // $value[0]['value_hex'] == '2a8648ce3d040303' || // OBJ_ecdsa_with_SHA384
+              // $value[0]['value_hex'] == '2a8648ce3d040304' || // OBJ_ecdsa_with_SHA512
+              // $value[0]['value_hex'] == '2a8648ce3d0403') { // OBJ_ecdsa_with_Specified
+            // $pkeyType = 'ec';
+          // } else {
+            // $pkeyType = 'rsa';
+          // }
+
           unset($curr[$key]);
         }
         if($value['type'] == '03') {
@@ -790,6 +808,14 @@ class x509 {
             if(is_numeric($subjectPublicKeyInfoK)) {
               if($subjectPublicKeyInfoV['type'] == '30') {
                 $subjectPublicKeyInfo['algorithm']=self::oidfromhex($subjectPublicKeyInfoV[0]['value_hex']);
+                // $subjectPublicKeyInfo['algorithm']=($subjectPublicKeyInfoV[0]['value_hex']);
+                if($subjectPublicKeyInfoV[0]['value_hex'] == '2a864886f70d010101') { // OBJ_rsaEncryption
+                  $subjectPublicKeyInfo_algorithm = 'rsa';
+                }
+                if($subjectPublicKeyInfoV[0]['value_hex'] == '2a8648ce3d0201') { // OBJ_X9_62_id_ecPublicKey
+                  $subjectPublicKeyInfo_algorithm = 'ec';
+                  $subjectPublicKeyInfoEc_curveName = $subjectPublicKeyInfoV[1]['value_hex'];
+                }
               }
               if($subjectPublicKeyInfoV['type'] == '03') {
                 $subjectPublicKeyInfo['subjectPublicKey']=substr($subjectPublicKeyInfoV['value'], 2);
@@ -800,8 +826,14 @@ class x509 {
           }
           $subjectPublicKeyInfo['hex']=$value['hexdump'];
           $subjectPublicKey_parse =asn1::parse($subjectPublicKeyInfo['subjectPublicKey']);
-          $subjectPublicKeyInfo['keyLength']=(strlen(substr($subjectPublicKey_parse[0][0]['value'], 2))/2)*8;
-          $subjectPublicKeyInfo['sha1']=hash('sha1', pack('H*', $subjectPublicKeyInfo['subjectPublicKey']));
+          if($subjectPublicKeyInfo_algorithm == 'rsa') {
+            $subjectPublicKeyInfo['keyLength']=(strlen(substr($subjectPublicKey_parse[0][0]['value'], 2))/2)*8;
+            $subjectPublicKeyInfo['sha1']=hash('sha1', pack('H*', $subjectPublicKeyInfo['subjectPublicKey']));
+          }
+          if($subjectPublicKeyInfo_algorithm == 'ec') {
+            $subjectPublicKeyInfo['curveName']=$subjectPublicKeyInfoEc_curveName;
+            $subjectPublicKeyInfo['sha1']=hash('sha1', pack('H*', $subjectPublicKeyInfo['subjectPublicKey']));
+          }
           $curr['subjectPublicKeyInfo']=$subjectPublicKeyInfo;
           unset($curr[$key]);
           continue;
@@ -922,6 +954,7 @@ class x509 {
         $ar['cert']['tbsCertificate']['attributes'] = $curr;
       }
     }
+    // print_r($ar['cert']);
     return $ar['cert'];
   }
 
