@@ -111,6 +111,9 @@ function p_debug($e, $retval = false) {
     if (_DEBUG_LEVEL >= 3) {
         p_stderr($e, "Debug");
     }
+    if (defined('LOGHTML') && LOGHTML != false) {
+        echo "DEBUG: $e\n";
+    }
     return $retval;
 }
 /**
@@ -123,6 +126,9 @@ function p_warning($e, $retval = false) {
     // If the debug level is less than 2, suppress warning messages
     if (_DEBUG_LEVEL >= 2) {
         p_stderr($e, "Warning");
+    }
+    if (defined('LOGHTML') && LOGHTML != false) {
+        echo "WARNING: $e\n";
     }
     return $retval;
 }
@@ -137,6 +143,10 @@ function p_error($e, $retval = false) {
     if (_DEBUG_LEVEL >= 1) {
         p_stderr($e, "Error");
     }
+    if (defined('LOGHTML') && LOGHTML != false) {
+        echo "ERROR: $e\n";
+    }
+    
     return $retval;
 }
 /**

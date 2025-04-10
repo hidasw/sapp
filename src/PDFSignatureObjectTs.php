@@ -44,7 +44,7 @@ if (!defined('__BYTERANGE_SIZE'))
     define('__BYTERANGE_SIZE', 68);
 
 // This is an special object that has a set of fields
-class PDFSignatureObject extends PDFObject {
+class PDFSignatureObjectTs extends PDFObject {
     protected $_prev_content_size = 0;
     protected $_post_content_size = null;
 
@@ -83,17 +83,26 @@ class PDFSignatureObject extends PDFObject {
      * Constructs the object and sets the default values needed to sign
      * @param oid the oid for the object
      */
-    public function __construct($oid) {
+    public function __construct($oid) { // /SubFilter/ETSI.RFC3161/Filter/Adobe.PPKMS/Type/DocTimeStamp
         $this->_prev_content_size = 0;
         $this->_post_content_size = null;
         parent::__construct($oid, [
+            'Type' => "/DocTimeStamp",
             'Filter' => "/Adobe.PPKLite",
-            'Type' => "/Sig",
-            // 'SubFilter' => "/adbe.pkcs7.detached",
-            'SubFilter' => "/ETSI.CAdES.detached",
-            'ByteRange' => new PDFValueSimple(str_repeat(" ", __BYTERANGE_SIZE)),
+            'SubFilter' => "/ETSI.RFC3161",
             'Contents' => "<" . str_repeat("0", __SIGNATURE_MAX_LENGTH) . ">",
-            'M' => new PDFValueString(timestamp_to_pdfdatestring()),
+            'ByteRange' => new PDFValueSimple(str_repeat(" ", __BYTERANGE_SIZE)),
+            //'M' => new PDFValueString(timestamp_to_pdfdatestring()),
+            //'Name' => "()",
+            //'Type' => "/DocTimeStamp",
+
+            //'SubFilter' => "/ETSI.RFC3161",
+            //'Filter' => "/Adobe.PPKLite",
+            //'ByteRange' => new PDFValueSimple(str_repeat(" ", __BYTERANGE_SIZE)),
+            //'M' => new PDFValueString(timestamp_to_pdfdatestring()),
+            //'Name' => "()",
+            //'Contents' => "<" . str_repeat("0", __SIGNATURE_MAX_LENGTH) . ">",
+
         ]);
     }
     /**

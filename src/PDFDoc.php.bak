@@ -966,39 +966,36 @@ class PDFDoc extends Buffer {
 
             // $cms->signature_data['ltv'] = $_signature->get_ltv();
             // $cms->signature_data['tsa'] = $_signature->get_tsa();
-            if(!$cert_chainsValidation1 = $cms->cert_chainsValidation('-----BEGIN CERTIFICATE-----
-MIIE4jCCAsqgAwIBAgIBCzANBgkqhkiG9w0BAQsFADAXMRUwEwYDVQQDEwxSb290
-IENBIFRlc3QwIhgPMjAyNTA0MDkwMzI3MjVaGA8yMDM1MDQwOTAzMjcyNVowGzEZ
-MBcGA1UEAxMQUm9vdF9DQV90ZXN0X1RTQTCCASIwDQYJKoZIhvcNAQEBBQADggEP
-ADCCAQoCggEBAL8jAKt/NUWcE272JRf0G0VETFQSpTDnXSPZtcgS9a+CQ5cXRTUc
-uU4w9ZwcZTbBdEnBKmBGMHWUnDDlApCe/Fq1qLTzz8Yl8ZvfmnE6hyZQFS6C1abD
-3jGlBO2nFrRWJc101Ap1H4ZNNiBs7J4fpVkiO/YY7j9K5G45S63Lh8COJ6qvhyZx
-WTBmd+LwlUH7o1Dm7zc9CHX1cFAsvvLkDT0GzJ3qpy3erfdxvsUfKDsaT7+j2+Z/
-K7TXQQFchbemi9RpLzNIa6LqDAKCcIeNeLhFdsGY5zWtd2c0lZUf/s7Szl3KWnKX
-pmxDo3ZRyoN7vG3bV0c4A4Rx0Nr0BhFAsoUCAwEAAaOCAS8wggErMB0GA1UdDgQW
-BBR4YHBBwpMfxslQCsdoFfQ0u8adszAfBgNVHSMEGDAWgBRyyawOSaJzklT0cvD2
-TrUVhXWtrjBzBggrBgEFBQcBAQRnMGUwPAYIKwYBBQUHMAKGMGh0dHA6Ly9sb2Nh
-bGhvc3QvY2EvP2lzc3Vlcj1Sb290JTIwQ0ElMjBUZXN0LmNydDAlBggrBgEFBQcw
-AYYZaHR0cDovL2xvY2FsaG9zdC9jYS9vY3NwLzA+BgNVHR8ENzA1MDOgMaAvhi1o
-dHRwOi8vbG9jYWxob3N0L2NhLz9jcmw9Um9vdCUyMENBJTIwVGVzdC5jcmwwDgYD
-VR0PAQH/BAQDAgeAMBYGA1UdJQEB/wQMMAoGCCsGAQUFBwMIMAwGA1UdEwEB/wQC
-MAAwDQYJKoZIhvcNAQELBQADggIBAFQEindXVVqo2St3vTvdoHEGnqfuz6ASdH34
-ZcwYf+OnIxAGd4wm3Jy+zVL2/K0E4eTvy7ge0wpIZwLQpUN95Uel69Q4f5xU+C3u
-42LM99rg2qXknahQv67YnmGetayWIFNkNBg6tLicaT01BUj/dD9Eplsjnyc8KnOf
-cBSR5ZhaNe/jMsm79C/2iXbd4rMTNcjjY3608pOW8b3GTZ12UmdlEbedbwP4snm2
-aGsbz5RMPRjVrILfQ9+mcP6x2lLxQt42KHPFQ1UXaFhv7KHTQPkGSeEOcuLI8ZF7
-rmqnrlbM0YrHi8AN0HxxlhsSmT61q0tUG3P/vXcvJVq2LYawt1ARQ1rihTVh7b78
-jJe0nKEGUua81Xrh7UsTbzjp6rx6oPOwC2FVN0t/N6UhQIX4zCdMPPaB0UvR6KBB
-0/G1DnVkcIfDyfoNUxf0zwoXA7oUBvvxW4FNeYfAVDCyloBnTc5cYBZDakMzOVDY
-wzXmZiMC5E8Xeewyyn+A0sJtG6PZTse9/DqXBOaI2W8LHClC9Xpfy5hxdjeT62Js
-w/rFe1H7sTdGi3wb9+dCWrpz05HX62U3yXY8upXrGwH3Pj/G+DHkOoMnldWNi9gb
-ExhCIBdlGSeeDyxERJ6/lKykKURALuh+Yss2Vpv0qM/JZKJw5CUvJY1UrWav4fQC
-vwl56mW/
------END CERTIFICATE-----
+            // if(!$cert_chainsValidation = $cms->cert_chainsValidation('-----BEGIN CERTIFICATE-----
+// MIIE4jCCAsqgAwIBAgIBCjANBgkqhkiG9w0BAQsFADAXMRUwEwYDVQQDEwxSb290
+// IENBIFRlc3QwIhgPMjAyNTA0MDkwMjU4MjhaGA8yMDI1MDUwOTAyNTgyOFowGzEZ
+// MBcGA1UEAxMQUm9vdF9DQV90ZXN0X1RTQTCCASIwDQYJKoZIhvcNAQEBBQADggEP
+// ADCCAQoCggEBAL8jAKt/NUWcE272JRf0G0VETFQSpTDnXSPZtcgS9a+CQ5cXRTUc
+// uU4w9ZwcZTbBdEnBKmBGMHWUnDDlApCe/Fq1qLTzz8Yl8ZvfmnE6hyZQFS6C1abD
+// 3jGlBO2nFrRWJc101Ap1H4ZNNiBs7J4fpVkiO/YY7j9K5G45S63Lh8COJ6qvhyZx
+// WTBmd+LwlUH7o1Dm7zc9CHX1cFAsvvLkDT0GzJ3qpy3erfdxvsUfKDsaT7+j2+Z/
+// K7TXQQFchbemi9RpLzNIa6LqDAKCcIeNeLhFdsGY5zWtd2c0lZUf/s7Szl3KWnKX
+// pmxDo3ZRyoN7vG3bV0c4A4Rx0Nr0BhFAsoUCAwEAAaOCAS8wggErMB0GA1UdDgQW
+// BBR4YHBBwpMfxslQCsdoFfQ0u8adszAfBgNVHSMEGDAWgBRyyawOSaJzklT0cvD2
+// TrUVhXWtrjBzBggrBgEFBQcBAQRnMGUwPAYIKwYBBQUHMAKGMGh0dHA6Ly9sb2Nh
+// bGhvc3QvY2EvP2lzc3Vlcj1Sb290JTIwQ0ElMjBUZXN0LmNydDAlBggrBgEFBQcw
+// AYYZaHR0cDovL2xvY2FsaG9zdC9jYS9vY3NwLzA+BgNVHR8ENzA1MDOgMaAvhi1o
+// dHRwOi8vbG9jYWxob3N0L2NhLz9jcmw9Um9vdCUyMENBJTIwVGVzdC5jcmwwDgYD
+// VR0PAQH/BAQDAgeAMBYGA1UdJQEB/wQMMAoGCCsGAQUFBwMIMAwGA1UdEwEB/wQC
+// MAAwDQYJKoZIhvcNAQELBQADggIBAFu5YalT20XqRC/wm52wiKogr374tyRbmNma
+// JgiPKB0u91FhqdYImTgl7q80dVxMQnLHi0kIPn05XQMofF26rdg1cJ5KKGaSVugj
+// sv9rkmTb9lMMGgyMaOf+gUZJZXH0EQGyJIzcWwbUw2M27U4DaDK/MkHrJlgwbuWG
+// YcKm/y/DJT+pOZknlgG2S1prXau8BSpcmXZjB98JaqYis91HVy2vCi31diEddXHp
+// OXtO5Sr87yCPj6b7RWr6KiGIyzQ8OtOeapkEUfCSYV/ExqPx7JWL4gnwueaza6OX
+// kBd15ilXiT63nEFJfK1xfeDSKF13Jfupka0FwqrCdFMqiQm128gh1QnL2s9QbWe6
+// +bOevyd2rBRvCV4WaDVG/5XnHw1JcrcHbpz0O65ohqjEcUwjZl2N2ogHXAukow7q
+// 0s2nmOhiYFcWe3HSyq+0V4Dcloq4cmQ9qiYwx4aA6jSwhTzFMKOtzDatZi8Ko8Tn
+// /QnkOoA31x2nccHgz2LsHXmjZfBLtQay63bAp5El7t5lvH+fTDTsmBIktaWSdZMS
+// Cdil64R2gnbETdeTNTIEN//bs48Z4qJ60pSPBARoFsolcZ0FazP0xBQ02f4guWpO
+// Y+cwO62RtBcyGWM8GPhie9gdnnNxggIplXMYkcMi8SWBW1WPm951kRqSc8pZNc1x
+// JaX8C5cT
+// -----END CERTIFICATE-----
 // ')) {
-	
-	
-}
             if(!$cert_chainsValidation = $cms->cert_chainsValidation($certificate['cert'])) {
               p_error(" cert_chainsValidation FAILED!");
               return new Buffer();
@@ -1020,24 +1017,13 @@ vwl56mW/
 		foreach($cert_chainsValidation as $key_dss=>$val_dssxx) {
 			$i=0;
 			foreach($cert_chainsValidation[$key_dss] as $val_dss) {
-				if(!empty($val_dss)) {
+				// if(!empty($dss_cert)) {
 					$DSS_certs=$this->create_object();
 					// $DSS_certs->set_stream("======================$key_dss $i ==============", false);
 					$DSS_certs->set_stream($val_dss, false);
 					$dss_object[$key_dss]->push(new PDFValueReference($DSS_certs->get_oid()));
 					$i++;
-				}
-			}
-		}
-		foreach($cert_chainsValidation1 as $key_dss=>$val_dssxx) {
-			$i=0;
-			foreach($cert_chainsValidation[$key_dss] as $val_dss) {
-				if(!empty($val_dss)) {
-					$DSS_certs=$this->create_object();
-					$DSS_certs->set_stream($val_dss, false);
-					$dss_object[$key_dss]->push(new PDFValueReference($DSS_certs->get_oid()));
-					$i++;
-				}
+				// }
 			}
 		}
 
@@ -1431,7 +1417,7 @@ vwl56mW/
         $this->push_state();
 
         // Update the timestamp
-        // $this->update_mod_date();
+        $this->update_mod_date();
 
         $_signature = null;
         if (($this->_appearance !== null) || ($this->_certificate !== null)) {

@@ -41,7 +41,7 @@ class x509 {
             asn1::seq($hexOidHashAlgos[$hashAlg]."0500"). // object OBJ $hexOidHashAlgos[$hashAlg] & OBJ_null
             asn1::oct($hash)
         ).
-        asn1::int(hash('crc32', rand()).'001'). // tsa nonce
+        asn1::int("0a".hash('crc32', rand())). // tsa nonce
         '0101ff' // req return cert
     );
     return hex2bin($tsReqData);
@@ -737,6 +737,7 @@ class x509 {
     }
     $ar['cert'] = $curr;
     $ar['cert']['sha1Fingerprint']=hash('sha1', $der);
+    $ar['cert']['sha256Fingerprint']=hash('sha256', $der);
     $curr = $ar['cert']['tbsCertificate'];
     $i=0;
     foreach($curr as $key=>$value) {

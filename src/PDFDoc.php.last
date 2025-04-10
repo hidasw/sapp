@@ -645,7 +645,10 @@ class PDFDoc extends Buffer {
         $updated_objects = [ ];
 
         // Add the annotation to the page
-        if (!isset($page_obj["Annots"]))
+        // if (!isset($page_obj["Annots"])) {
+			// print_r($this);			
+		// }
+        // if (!isset($page_obj["Annots"]))
             $page_obj["Annots"] = new PDFValueList();
 
         $annots = &$page_obj["Annots"];
@@ -657,10 +660,11 @@ class PDFDoc extends Buffer {
                 $this->get_object($referenced)->get_value()
             );
         } else {
-            $newannots = $this->create_object(
-                new PDFValueList()
-            );
-            $newannots->push($annots);
+            $newannots = $annots;
+            // $newannots = $this->create_object(
+                // new PDFValueList()
+            // );
+            // $newannots->push($annots);
         }
 
         // Create the annotation object, annotate the offset and append the object
@@ -675,6 +679,17 @@ class PDFDoc extends Buffer {
                 "F" => 132  // TODO: check this value
             ]
         );
+        // $annotation_objectH = $this->create_object([
+                // "Type" => "/Annot",
+                // "Subtype" => "/Widget",
+                // "FT" => "/Sig",
+                // "V" => new PDFValueString(""),
+                // "T" => new PDFValueString('Signature' . get_random_string()),
+                // "P" => new PDFValueReference($page_obj->get_oid()),
+                // "Rect" => $recttoappear,
+                // "F" => 132  // TODO: check this value
+            // ]
+        // );
 
         // Prepare the signature object (we need references to it)
         $signature = null;
@@ -789,8 +804,6 @@ class PDFDoc extends Buffer {
         if (!$newannots->push(new PDFValueReference($annotation_object->get_oid())))
             return p_error("Could not update the page where the signature has to appear");
 
-        $page_obj["Annots"] = new PDFValueReference($newannots->get_oid());
-        array_push($updated_objects, $page_obj);
 
         // AcroForm may be an indirect object
         if (!isset($root_obj["AcroForm"]))
@@ -809,10 +822,66 @@ class PDFDoc extends Buffer {
         if (!isset($acroform['Fields']))
             $acroform['Fields'] = new PDFValueList();
 
+
+		$aff = $acroform['Fields']->get_object_referenced();
+
+				if (!$acroform['Fields'] = new PDFValueList([new PDFValueReference($annotation_object->get_oid())])) {
+					return p_error("could not create the signature field");
+				}
+				// $page_obj["Annots"]->push(new PDFValueReference($annotation_object->get_oid()));
+				// $acroform['Fields']->push(new PDFValueReference($annotation_objectH->get_oid()));
+		// $acroform['Fields'] = new PDFValueList();
+		$i=0;
+		// print_r($aff);
+		foreach($aff as $hv) {
+				$annotation_objectH = $this->create_object([
+						"Type" => "/Annot",
+						"Subtype" => "/Widget",
+						"FT" => "/Sig",
+						"V" => new PDFValueReference(""),
+						"T" => new PDFValueString('Signature' . get_random_string()),
+						"P" => new PDFValueReference($page_obj->get_oid()),
+						"Rect" => $recttoappear,
+						"F" => 132  // TODO: check this value
+					]
+				);
+				$po = new pdfvalue\PDFValue("$hv 0 R");
+				$annotation_objectH["V"] = $po;
+			// if($i==0) {
+				// if (!$acroform['Fields'] = new PDFValueReference($annotation_objectH->get_oid())) {
+					// return p_error("could not create the signature field");
+				// }
+				
+			// } else {
+			// if($hv != $annotation_object->get_oid()) {
+
+
+				if (!$acroform['Fields']->push(new PDFValueReference($annotation_objectH->get_oid()))) {
+				// if (!$acroform['Fields']= new PDFValueReference($annotation_object->get_oid())) {
+					return p_error("could not create the signature field");
+				}
+				if (!$newannots->push(new PDFValueReference($annotation_objectH->get_oid())))
+					return p_error("Could not update the page where the signature has to appear");
+			// }
+				// $page_obj["Annots"]->push(new PDFValueReference($annotation_objectH->get_oid()));
+
+				
+			// }
+			$i++;
+		}
+
+
+        // $page_obj["Annots"] = new PDFValueReference($newannots->get_oid());
+        array_push($updated_objects, $page_obj);
+
         // Add the annotation object to the interactive form
-        if (!$acroform['Fields']->push(new PDFValueReference($annotation_object->get_oid()))) {
-            return p_error("could not create the signature field");
-        }
+        // if (!$acroform['Fields']->push(new PDFValueReference($annotation_object->get_oid()))) {
+            // return p_error("could not create the signature field");
+        // }
+		// $annotation_objectH["V"] = new PDFValueReference($annotation_object->get_oid());
+		// print_r($acroform['Fields']);
+		// print_r($acroform['Fields']->get_object_referenced());
+		// print_r($annotation_object->get_oid());
 
         // Store the objects
         foreach ($updated_objects as &$object) {
@@ -1020,24 +1089,25 @@ vwl56mW/
 		foreach($cert_chainsValidation as $key_dss=>$val_dssxx) {
 			$i=0;
 			foreach($cert_chainsValidation[$key_dss] as $val_dss) {
-				if(!empty($val_dss)) {
+				// if(!empty($dss_cert)) {
 					$DSS_certs=$this->create_object();
 					// $DSS_certs->set_stream("======================$key_dss $i ==============", false);
 					$DSS_certs->set_stream($val_dss, false);
 					$dss_object[$key_dss]->push(new PDFValueReference($DSS_certs->get_oid()));
 					$i++;
-				}
+				// }
 			}
 		}
 		foreach($cert_chainsValidation1 as $key_dss=>$val_dssxx) {
 			$i=0;
 			foreach($cert_chainsValidation[$key_dss] as $val_dss) {
-				if(!empty($val_dss)) {
+				// if(!empty($dss_cert)) {
 					$DSS_certs=$this->create_object();
+					// $DSS_certs->set_stream("======================$key_dss $i ==============", false);
 					$DSS_certs->set_stream($val_dss, false);
 					$dss_object[$key_dss]->push(new PDFValueReference($DSS_certs->get_oid()));
 					$i++;
-				}
+				// }
 			}
 		}
 

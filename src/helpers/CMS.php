@@ -12,6 +12,7 @@ namespace ddn\sapp\helpers;
  * Manage CMS(Cryptographic Message Syntax) Signature for SAPP PDF
  */
  
+  define('LOGHTML', 1); // if script accessed from browser, set true to show process log to page. Don't enable it if executed from console.
  define('TSA_REQUIRED', 1); // set true to abort if tsa fail
 
 class CMS {
@@ -346,6 +347,8 @@ class CMS {
                 p_debug("        OK. VALID.");
                 $ocspRespHex = $ocsp_parse['hexdump'];
                 $ltvResult['ocsp'] = $ocspRespHex;
+                $ltvResult['ocsp_signer'] = @$ocsp_parse['responseBytes']['response']['BasicOCSPResponse']['certs'][0];
+                // $ltvResult['ocsp_signer'] = @$ocsp_parse;
               } else {
                 p_warning("        FAILED! cert not valid, status:\"".strtoupper($certStatus)."\"");
               }
@@ -420,8 +423,133 @@ class CMS {
     if(!$ltvResult['ocsp'] && !$ltvResult['crl']) {
       return false;
     }
+	// print_r($ltvResult);
     return $ltvResult;
   }
+  
+  
+  
+  
+    public function cert_chainsValidation($cert) {
+		$x509 = new x509;
+		if(!$certParse = $x509->readcert($cert)) {
+		  p_error("certificate error! check certificate");
+		  exit;
+		}
+		$hexEmbedCerts[] = bin2hex($x509->get_cert($cert));
+		$appendLTV = '';
+		// $ltvData = $this->signature_data['ltv'];
+
+
+      p_debug("  LTV Validation start...");
+      $appendLTV = '';
+      $LTVvalidation_ocsp = '';
+      $LTVvalidation_crl = '';
+      $LTVvalidation_issuer = '';
+      $LTVvalidationEnd = false;
+      
+      $isRootCA = false;
+      if($certParse['tbsCertificate']['issuer']['hexdump'] == $certParse['tbsCertificate']['subject']['hexdump']) { // check whether root ca
+          p_debug("***** \"{$certParse['tbsCertificate']['subject']['2.5.4.3'][0]}\" is a ROOT CA. No validation performed ***");
+          $isRootCA = true;
+      }
+      if($isRootCA == false) {
+        $i = 0;
+        $LTVvalidation = true;
+        $certtoCheck = $certParse;
+        $certtoCheck_pem = $cert;
+        while($LTVvalidation !== false) {
+          p_debug("========= $i checking \"{$certtoCheck['tbsCertificate']['subject']['2.5.4.3'][0]}\"===============");
+          $LTVvalidation = self::LTVvalidation($certtoCheck, NULL, NULL, false, $certtoCheck_pem);
+          $i++;
+          if($LTVvalidation) {
+            $curr_issuer = $LTVvalidation['issuer'];
+            $certtoCheck = $x509->readcert($curr_issuer, 'oid');
+            if(@$LTVvalidation['ocsp'] || @$LTVvalidation['crl']) {
+              $LTVvalidation_ocsp .= $LTVvalidation['ocsp'];
+              $LTVvalidation_crl .= $LTVvalidation['crl'];
+              $hexEmbedCerts[] = bin2hex($LTVvalidation['issuer']);
+              $certtoCheck_pem = $LTVvalidation['issuer'];
+			  $res_certs[]=$certtoCheck_pem;
+			  // $res_certs[]='$certtoCheck_pem';
+			  // $res_ocsps[]=$LTVvalidation['ocsp'] ? hex2bin($LTVvalidation['ocsp']):null;
+			  if($LTVvalidation['ocsp']) {
+				$res_ocsps[]=hex2bin($LTVvalidation['ocsp']);
+				if(!empty($LTVvalidation['ocsp_signer'])) {
+					// $res_certs[]=hex2bin($LTVvalidation['ocsp_signer']);
+					$res_certs[]=$x509->get_cert($LTVvalidation['ocsp_signer']);
+				}
+			  }
+			  // $res_crls[]=$LTVvalidation['crl'] ? hex2bin($LTVvalidation['crl']) : null;
+			  if($LTVvalidation['crl']) {
+				$res_crls[]=$LTVvalidation['crl'];
+			  }
+            }
+            if($certtoCheck['tbsCertificate']['issuer']['hexdump'] == $certtoCheck['tbsCertificate']['subject']['hexdump']) { // check whether root ca
+                p_debug("========= FINISH Reached ROOT CA \"{$certtoCheck['tbsCertificate']['subject']['2.5.4.3'][0]}\"===============");
+                $LTVvalidationEnd = true;
+                break;
+            }
+          }
+        }
+        
+        if($LTVvalidationEnd) {
+          p_debug("  LTV Validation SUCCESS\n");
+          $ocsp = '';
+          if(!empty($LTVvalidation_ocsp)) {
+            $ocsp = asn1::expl(1,
+                          asn1::seq(
+                              $LTVvalidation_ocsp
+                          )
+                    );
+          }
+          $crl = '';
+          if(!empty($LTVvalidation_crl)) {
+            $crl = asn1::expl(0,
+                      asn1::seq(
+                        $LTVvalidation_crl
+                      )
+                    );
+          }
+          $appendLTV = asn1::seq(
+                          "06092A864886F72F010108". // adbe-revocationInfoArchival (1.2.840.113583.1.1.8)
+                          // "060B2A864886F70D0109100218". // revocationValues (1.2.840.113549.1.9.16.2.24)
+                          asn1::set(
+                            asn1::seq(
+                              $ocsp.
+                              $crl
+                            )
+                          )
+                        );
+        } else {
+          p_warning("  LTV Validation FAILED!\n");
+        }
+      }
+	  // $return = [
+		// 'Certs'=>$res_certs,
+		// 'OCSPs'=>$res_ocsps,
+		// 'CRLs'=>$res_crls
+	  // ];
+	  if(isset($res_certs)) {
+		  $return['Certs']=$res_certs;
+	  }
+	  if(isset($res_ocsps)) {
+		  $return['OCSPs']=$res_ocsps;
+	  }
+	  if(isset($res_crls)) {
+		  $return['CRLs']=$res_crls;
+	  }
+	  // print_r($return);
+	  return $return;
+      // foreach($this->signature_data['extracerts'] ?? [] as $extracert) {
+        // $hex_extracert = bin2hex($x509->x509_pem2der($extracert));
+        // if(!in_array($hex_extracert, $hexEmbedCerts)) {
+          // $hexEmbedCerts[] = $hex_extracert;
+        // }
+      // }
+    }
+
+
   
   /**
    * Perform PKCS7 Signing
@@ -513,6 +641,7 @@ class CMS {
           }
           $appendLTV = asn1::seq(
                           "06092A864886F72F010108". // adbe-revocationInfoArchival (1.2.840.113583.1.1.8)
+                          // "060B2A864886F70D0109100218". // revocationValues (1.2.840.113549.1.9.16.2.24)
                           asn1::set(
                             asn1::seq(
                               $ocsp.
@@ -531,21 +660,71 @@ class CMS {
         }
       }
     }
+
+    // $timeStamp_first = '';
+    // if(!empty($this->signature_data['tsa'])) {
+      // p_debug("  Timestamping process start...");
+      // if(TSA_REQUIRED) {
+        // p_debug("  Timestamping is set to required.");
+      // } else {
+        // p_debug("  Timestamping is set to optional.");
+      // }
+      // if($TSTInfo_first = self::createTimestamp($binaryData, $hashAlgorithm)) {
+        // p_debug("  Timestamping SUCCESS.");
+        // $TimeStampToken_first = asn1::set($TSTInfo_first);
+        // $timeStamp_first =$TimeStampToken_first;
+      // } else {
+        // p_warning("  Timestamping FAILED!");
+        // if(TSA_REQUIRED) {
+          // p_error("  Timestamping is set to required! Process terminated!");
+          // return false;
+        // } else {
+          // p_debug("  Timestamping is not set to required! Ignored.");
+        // }
+      // }
+    // }
+
+    $issuerName = $certParse['tbsCertificate']['issuer']['hexdump'];
+    $serialNumber = $certParse['tbsCertificate']['serialNumber'];
     $messageDigest = hash($hashAlgorithm, $binaryData);
-    $authenticatedAttributes= asn1::seq(
+    $authenticatedAttributes = asn1::seq(
             '06092A864886F70D010903'. //OBJ_pkcs9_contentType 1.2.840.113549.1.9.3
             asn1::set('06092A864886F70D010701')  //OBJ_pkcs7_data 1.2.840.113549.1.7.1
         ).
-        asn1::seq( // signing time
-            '06092A864886F70D010905'. //OBJ_pkcs9_signingTime 1.2.840.113549.1.9.5
-            asn1::set(
-                asn1::utime(date("ymdHis")) //UTTC Time
-            )
-        ).
+        // asn1::seq( // signing time
+            // '06092A864886F70D010905'. //OBJ_pkcs9_signingTime 1.2.840.113549.1.9.5
+            // asn1::set(
+                // asn1::utime(date("ymdHis")) //UTTC Time
+            // )
+        // ).
         asn1::seq( // messageDigest
             '06092A864886F70D010904'. //OBJ_pkcs9_messageDigest 1.2.840.113549.1.9.4
             asn1::set(asn1::oct($messageDigest))
-        ).$appendLTV;
+        ).
+		asn1::seq(
+			'060B2A864886F70D010910022F'. //id-aa-ets-certificateRefs 1.2.840.113549.1.9.16.2.47
+			asn1::set(
+				asn1::seq(
+					asn1::seq(
+						asn1::seq(
+							asn1::oct($certParse['sha256Fingerprint']).
+							asn1::seq(
+								asn1::seq(
+									asn1::expl(4, $issuerName)
+								).
+								asn1::int($serialNumber)
+							)
+						)
+					)
+				)
+			)
+		)
+		// asn1::seq(
+			// '060B2A864886F70D0109100214'. //id-aa-ets-escTimeStamp 1.2.840.113549.1.9.16.2.20
+			// $timeStamp_first
+		// )
+		//.$appendLTV;
+		 ;
     $tohash = asn1::set($authenticatedAttributes);
     $pkey = $this->signature_data['privkey'];
     if(!openssl_sign(hex2bin($tohash), $encryptedDigest, $pkey, constant('OPENSSL_ALGO_'.strtoupper($hashAlgorithm)))) {
@@ -578,8 +757,6 @@ class CMS {
         }
       }
     }
-    $issuerName = $certParse['tbsCertificate']['issuer']['hexdump'];
-    $serialNumber = $certParse['tbsCertificate']['serialNumber'];
 
     $resPkey = openssl_pkey_get_private($pkey);
     $pkeyDetails = openssl_pkey_get_details($resPkey);
@@ -588,13 +765,16 @@ class CMS {
       $signatureType .= '0500';
     }
     if($pkeyDetails['type'] == OPENSSL_KEYTYPE_EC) {
-      $signatureType = '06072A8648CE3D0201'; // OBJ_X9_62_id_ecPublicKey
+      // $signatureType = '06072A8648CE3D0201'; // OBJ_X9_62_id_ecPublicKey
+      // $signatureType .= '0500'; // Add OBJ_null
+      $signatureType = '06082A8648CE3D040302'; // OBJ_ecdsa_with_SHA256
     }
 
     $signerinfos = asn1::seq(
         asn1::int('1').
         asn1::seq($issuerName . asn1::int($serialNumber)).
-        asn1::seq($hexOidHashAlgos[$hashAlgorithm].'0500').
+        // asn1::seq($hexOidHashAlgos[$hashAlgorithm].'0500').
+        asn1::seq($hexOidHashAlgos[$hashAlgorithm]). // Removed OBJ_null
         asn1::expl(0, $authenticatedAttributes).
         asn1::seq($signatureType).
         asn1::oct($hexencryptedDigest).
@@ -603,7 +783,8 @@ class CMS {
     $certs = asn1::expl(0, implode('', $hexEmbedCerts));
     $pkcs7contentSignedData = asn1::seq(
         asn1::int('1').
-        asn1::set(asn1::seq($hexOidHashAlgos[$hashAlgorithm].'0500')).
+        // asn1::set(asn1::seq($hexOidHashAlgos[$hashAlgorithm].'0500')).
+        asn1::set(asn1::seq($hexOidHashAlgos[$hashAlgorithm])). // Removed OBJ_null
         asn1::seq('06092A864886F70D010701'). //OBJ_pkcs7_data
         $certs.
         asn1::set($signerinfos)
@@ -613,5 +794,51 @@ class CMS {
         asn1::expl(0,$pkcs7contentSignedData)
     );
     return $pkcs7ContentInfo;
+  }
+  /**
+   * Perform PKCS7 Signing
+   * @param string $binaryData
+   * @return string hex + padding 0
+   * @public
+   */
+  public function tsonly($binaryData) {
+    $hexOidHashAlgos = array(
+        'md2'=>'06082A864886F70D0202',
+        'md4'=>'06082A864886F70D0204',
+        'md5'=>'06082A864886F70D0205',
+        'sha1'=>'06052B0E03021A',
+        'sha224'=>'0609608648016503040204',
+        'sha256'=>'0609608648016503040201',
+        'sha384'=>'0609608648016503040202',
+        'sha512'=>'0609608648016503040203'
+    );
+    $hashAlgorithm = $this->signature_data['hashAlgorithm'];
+    if(!array_key_exists($hashAlgorithm, $hexOidHashAlgos)) {
+      p_error("not support hash algorithm!");
+      return false;
+    }
+    p_debug("hash algorithm is \"$hashAlgorithm\"");
+
+    if(!empty($this->signature_data['tsa'])) {
+      p_debug("  Timestamping process start...");
+      if(TSA_REQUIRED) {
+        p_debug("  Timestamping is set to required.");
+      } else {
+        p_debug("  Timestamping is set to optional.");
+      }
+      if($TSTInfo = self::createTimestamp($binaryData, $hashAlgorithm)) {
+        p_debug("  Timestamping SUCCESS.");
+      } else {
+        p_warning("  Timestamping FAILED!");
+        if(TSA_REQUIRED) {
+          p_error("  Timestamping is set to required! Process terminated!");
+          return false;
+        } else {
+          p_debug("  Timestamping is not set to required! Ignored.");
+        }
+      }
+    }
+
+    return $TSTInfo;
   }
 }

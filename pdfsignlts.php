@@ -60,9 +60,10 @@ else {
             else {
                 if ($tsa != 'no') {
                     $obj->set_tsa($tsa);
+                    //$obj->set_tsa($tsa,'teszt','teszt'); // url auth user & password
                 }
                 $obj->set_ltv();
-                define('__SIGNATURE_MAX_LENGTH', 20000);
+                define('__SIGNATURE_MAX_LENGTH', 27000);
                 $docsigned = $obj->to_pdf_file_s();
                 if ($docsigned === false)
                     fwrite(STDERR, "could not sign the document");
