@@ -11,8 +11,10 @@ namespace ddn\sapp\helpers;
  * @class cms
  * Manage CMS(Cryptographic Message Syntax) Signature for SAPP PDF
  */
- 
-  define('LOGHTML', 1); // if script accessed from browser, set true to show process log to page. Don't enable it if executed from console.
+
+	if (isset($_SERVER['REMOTE_ADDR'])) {
+	  define('LOGHTML', 1); // if script accessed from browser, set true to show process log to page. Don't enable it if executed from console.
+	}
  define('TSA_REQUIRED', 1); // set true to abort if tsa fail
 
 class CMS {
