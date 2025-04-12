@@ -59,8 +59,8 @@ else {
                 fwrite(STDERR, "the certificate is not valid");
             else {
                 if ($tsa != 'no') {
-                    $obj->set_tsa($tsa);
-                    //$obj->set_tsa($tsa,'teszt','teszt'); // url auth user & password
+                    //$obj->set_tsa($tsa);
+                    $obj->set_tsa($tsa,'teszt','teszt');
                 }
                 $obj->set_ltv();
                 define('__SIGNATURE_MAX_LENGTH', 27000);

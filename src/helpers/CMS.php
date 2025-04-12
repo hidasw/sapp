@@ -181,7 +181,7 @@ class CMS {
    * @param string $hashAlg hash algorithm
    * @return string hex TSTinfo.
    */
-  protected function createTimestamp($data, $hashAlg='sha1') {
+  protected function createTimestamp($data, $hashAlg='sha256') {
     $TSTInfo=false;
     $tsaQuery = x509::tsa_query($data, $hashAlg);
     $tsaData = $this->signature_data['tsa'];
@@ -700,8 +700,8 @@ class CMS {
         asn1::seq( // messageDigest
             '06092A864886F70D010904'. //OBJ_pkcs9_messageDigest 1.2.840.113549.1.9.4
             asn1::set(asn1::oct($messageDigest))
-        ).
-		asn1::seq(
+        )
+		.asn1::seq(
 			'060B2A864886F70D010910022F'. //id-aa-ets-certificateRefs 1.2.840.113549.1.9.16.2.47
 			asn1::set(
 				asn1::seq(
@@ -761,7 +761,8 @@ class CMS {
     $resPkey = openssl_pkey_get_private($pkey);
     $pkeyDetails = openssl_pkey_get_details($resPkey);
     if($pkeyDetails['type'] == OPENSSL_KEYTYPE_RSA) {
-      $signatureType = '06092A864886F70D010101'; // OBJ_rsaEncryption
+      // $signatureType = '06092A864886F70D010101'; // OBJ_rsaEncryption
+      $signatureType = '06092A864886F70D01010B'; // define('OBJ_sha256WithRSAEncryption', '06092A864886F70D01010B');
       $signatureType .= '0500';
     }
     if($pkeyDetails['type'] == OPENSSL_KEYTYPE_EC) {
@@ -777,8 +778,8 @@ class CMS {
         asn1::seq($hexOidHashAlgos[$hashAlgorithm]). // Removed OBJ_null
         asn1::expl(0, $authenticatedAttributes).
         asn1::seq($signatureType).
-        asn1::oct($hexencryptedDigest).
-        $timeStamp
+        asn1::oct($hexencryptedDigest)
+		.$timeStamp
     );
     $certs = asn1::expl(0, implode('', $hexEmbedCerts));
     $pkcs7contentSignedData = asn1::seq(
@@ -812,7 +813,8 @@ class CMS {
         'sha384'=>'0609608648016503040202',
         'sha512'=>'0609608648016503040203'
     );
-    $hashAlgorithm = $this->signature_data['hashAlgorithm'];
+    // $hashAlgorithm = $this->signature_data['hashAlgorithm'];
+    $hashAlgorithm = 'sha256';
     if(!array_key_exists($hashAlgorithm, $hexOidHashAlgos)) {
       p_error("not support hash algorithm!");
       return false;

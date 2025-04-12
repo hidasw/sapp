@@ -680,25 +680,11 @@ class PDFDoc extends Buffer {
         $signature = null;
         if ($this->_certificate !== null) {
             if(!defined('__SIGNATURE_MAX_LENGTH')) {
-              // Perform signature test to get signature size to define __SIGNATURE_MAX_LENGTH
-              p_debug("     __SIGNATURE_MAX_LENGTH not defined. Perform self defined...\n");
-              p_debug("     ########## PERFORM SIGNATURE LENGTH CHECK ##########\n");
-              $CMS = new helpers\CMS;
-              $CMS->signature_data['signcert'] = $this->_certificate['cert'];
-              $CMS->signature_data['extracerts'] = $this->_certificate['extracerts']??null;
-              $CMS->signature_data['hashAlgorithm'] = 'sha256';
-              $CMS->signature_data['privkey'] = $this->_certificate['pkey'];
-              $CMS->signature_data['tsa'] = $this->_signature_tsa;
-              $CMS->signature_data['ltv'] = $this->_signature_ltv_data;
-              $res = $CMS->pkcs7_sign('0');
-              $len = strlen($res);
-              p_debug("     Signature Length is \"$len\" Bytes");
-              p_debug("     ########## FINISHED SIGNATURE LENGTH CHECK #########\n\n");
-              define('__SIGNATURE_MAX_LENGTH', $len+64);
+              define('__SIGNATURE_MAX_LENGTH', 30000);
             }
 
-            $signature = $this->create_object([], "ddn\sapp\PDFSignatureObjectTs", false);
-            //$signature = new PDFSignatureObject([]);
+            $signature = new PDFSignatureObject($this->get_new_oid(), true);
+
             $signature->set_metadata($this->_metadata_name, $this->_metadata_reason, $this->_metadata_location, $this->_metadata_contact_info);
             $signature->set_certificate($this->_certificate);
             if($this->_signature_tsa !== null) {
@@ -712,79 +698,6 @@ class PDFDoc extends Buffer {
             $annotation_object["V"] = new PDFValueReference($signature->get_oid());
         }
 
-        // If an image is provided, let's load it
-        if ($imagefilename !== null) {
-            // Signature with appearance, following the Adobe workflow:
-            //   1. form
-            //   2. layers /n0 (empty) and /n2
-            // https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/acrobat_digital_signature_appearances_v9.pdf
-
-            // Get the page height, to change the coordinates system (up to down)
-            $pagesize = $this->get_page_size($pagetoappear);
-            $pagesize = explode(" ", $pagesize[0]->val());
-            $pagesize_h = floatval("" . $pagesize[3]) - floatval("" . $pagesize[1]);
-
-            $bbox = [ 0, 0, $recttoappear[2] - $recttoappear[0], $recttoappear[3] - $recttoappear[1]];
-            $form_object = $this->create_object([
-                "BBox" => $bbox,
-                "Subtype" => "/Form",
-                "Type" => "/XObject",
-                "Group" => [
-                    'Type' => '/Group',
-                    'S' => '/Transparency',
-                    'CS' => '/DeviceRGB'
-                ]
-            ]);
-
-            $container_form_object = $this->create_object([
-                "BBox" => $bbox,
-                "Subtype" => "/Form",
-                "Type" => "/XObject",
-                "Resources" => [ "XObject" => [
-                    "n0" => new PDFValueSimple(""),
-                    "n2" => new PDFValueSimple("")
-                    ] ]
-                ]);
-            $container_form_object->set_stream("q 1 0 0 1 0 0 cm /n0 Do Q\nq 1 0 0 1 0 0 cm /n2 Do Q\n", false);
-
-            $layer_n0 = $this->create_object([
-                "BBox" => [ 0.0, 0.0, 100.0, 100.0 ],
-                "Subtype" => "/Form",
-                "Type" => "/XObject",
-                "Resources" => new PDFValueObject()
-            ]);
-
-            // Add the same structure than Acrobat Reader
-            $layer_n0->set_stream("% DSBlank" . __EOL, false);
-
-            $layer_n2 = $this->create_object([
-                "BBox" => $bbox,
-                "Subtype" => "/Form",
-                "Type" => "/XObject",
-                "Resources" => new PDFValueObject()
-            ]);
-
-            $result = _add_image([$this, "create_object"], $imagefilename, $bbox[0], $bbox[1], $bbox[2], $bbox[3], $page_rotation->val());
-            if ($result === false)
-                return p_error("could not add the image");
-
-            $layer_n2["Resources"] = $result["resources"];
-            $layer_n2->set_stream($result['command'], false);
-
-            $container_form_object["Resources"]["XObject"]["n0"] = new PDFValueReference($layer_n0->get_oid());
-            $container_form_object["Resources"]["XObject"]["n2"] = new PDFValueReference($layer_n2->get_oid());
-
-            $form_object['Resources'] = new PDFValueObject([
-                "XObject" => [
-                    "FRM" => new PDFValueReference($container_form_object->get_oid())
-                ]
-            ]);
-            $form_object->set_stream("/FRM Do", false);
-
-            // Set the signature appearance field to the form object
-            $annotation_object["AP"] = [ "N" => new PDFValueReference($form_object->get_oid())];
-            $annotation_object["Rect"] = [ $recttoappear[0], $pagesize_h - $recttoappear[1], $recttoappear[2], $pagesize_h - $recttoappear[3] ];
-        }
 
         if (!$newannots->push(new PDFValueReference($annotation_object->get_oid())))
             return p_error("Could not update the page where the signature has to appear");
@@ -870,52 +783,6 @@ class PDFDoc extends Buffer {
         // The objects to update
         $updated_objects = [ ];
 
-        // Add the annotation to the page
-        // if (!isset($page_obj["Annots"]))
-            // $page_obj["Annots"] = new PDFValueList();
-
-        // $annots = &$page_obj["Annots"];
-        // $page_rotation = $page_obj["Rotate"]??new PDFValueSimple(0);
-
-        // if ((($referenced = $annots->get_object_referenced()) !== false) && (!is_array($referenced))) {
-            // It is an indirect object, so we need to update that object
-            // $newannots = $this->create_object(
-                // $this->get_object($referenced)->get_value()
-            // );
-        // } else {
-            // $newannots = $this->create_object(
-                // new PDFValueList()
-            // );
-            // $newannots->push($annots);
-        // }
-
-        // Create the annotation object, annotate the offset and append the object
-        // $annotation_object = $this->create_object([
-                // "Type" => "/Annot",
-                // "Subtype" => "/Widget",
-                // "FT" => "/Sig",
-                // "V" => new PDFValueString(""),
-                // "T" => new PDFValueString('Signature' . get_random_string()),
-                // "P" => new PDFValueReference($page_obj->get_oid()),
-                // "Rect" => $recttoappear,
-                // "F" => 132  // TODO: check this value
-            // ]
-        // );
-
-        // Prepare the signature object (we need references to it)
-        // $signature = null;
-        // if ($this->_certificate !== null) {
-        // }
-
-        // If an image is provided, let's load it
-        // if ($imagefilename !== null) {
-        // }
-
-        // if (!$newannots->push(new PDFValueReference($annotation_object->get_oid())))
-            // return p_error("Could not update the page where the signature has to appear");
-
-        // $page_obj["Annots"] = new PDFValueReference($newannots->get_oid());
-        // array_push($updated_objects, $page_obj);
 
         // AcroForm may be an indirect object
         if (!isset($root_obj["AcroForm"]))
@@ -929,34 +796,6 @@ class PDFDoc extends Buffer {
             array_push($updated_objects, $root_obj);
         }
 
-        // Add the annotation to the interactive form
-        // $acroform["SigFlags"] = 3;
-        // if (!isset($acroform['Fields']))
-            // $acroform['Fields'] = new PDFValueList();
-
-        // Add the annotation object to the interactive form
-        // if (!$acroform['Fields']->push(new PDFValueReference($annotation_object->get_oid()))) {
-            // return p_error("could not create the signature field");
-        // }
-		
-		
-		
-		
-
-        // if (isset($root_obj["Metadata"])) {
-            // $metadata = $root_obj["Metadata"];
-            // if ((($referenced = $metadata->get_object_referenced()) !== false) && (!is_array($referenced))) {
-                // $metadata = $this->get_object($referenced);
-                // $metastream = $metadata->get_stream();
-                // $metastream = preg_replace('/<xmp:ModifyDate>([^<]*)<\/xmp:ModifyDate>/', '<xmp:ModifyDate>' . $date->format("c") . '</xmp:ModifyDate>', $metastream);
-                // $metastream = preg_replace('/<xmp:MetadataDate>([^<]*)<\/xmp:MetadataDate>/', '<xmp:MetadataDate>' . $date->format("c") . '</xmp:MetadataDate>', $metastream);
-                // $metastream = preg_replace('/<xmpMM:InstanceID>([^<]*)<\/xmpMM:InstanceID>/', '<xmpMM:InstanceID>uuid:' . UUID::v4() . '</xmpMM:InstanceID>', $metastream);
-                // $metadata->set_stream($metastream, false);
-                // $this->add_object($metadata);
-            // }
-        // }
-		// cert_chainsValidation
-            // $certificate = $_signature->get_certificate();
             $cms = new CMS;
             $cms->signature_data['hashAlgorithm'] = 'sha256';
             // $cms->signature_data['privkey'] = $certificate['pkey'];
@@ -994,8 +833,7 @@ wzXmZiMC5E8Xeewyyn+A0sJtG6PZTse9/DqXBOaI2W8LHClC9Xpfy5hxdjeT62Js
 w/rFe1H7sTdGi3wb9+dCWrpz05HX62U3yXY8upXrGwH3Pj/G+DHkOoMnldWNi9gb
 ExhCIBdlGSeeDyxERJ6/lKykKURALuh+Yss2Vpv0qM/JZKJw5CUvJY1UrWav4fQC
 vwl56mW/
------END CERTIFICATE-----
-// ')) {
+-----END CERTIFICATE-----')) {
 	
 	
 }
@@ -1040,45 +878,6 @@ vwl56mW/
 				}
 			}
 		}
-
-		// $certss=$this->create_object();
-		// $crls=$this->create_object();
-		// $certss->set_stream('======================cert1==============', false);
-		// $crls->set_stream('============crl1=============', false);
-
-		// $dss_object['Certs']->push(new PDFValueReference($certss->get_oid()));
-		// $dss_object['CRLs']->push(new PDFValueReference($certss->get_oid()));
-		
-		// $i=0;
-		// foreach($cert_chainsValidation['certs'] as $dss_cert) {
-			// if(!empty($dss_cert)) {
-				// $DSS_certs=$this->create_object();
-				// $DSS_certs->set_stream("======================dss_cert $i ==============", false);
-				// $dss_object['Certs']->push(new PDFValueReference($DSS_certs->get_oid()));
-				// $i++;
-			// }
-		// }
-		// $i=0;
-		// foreach($cert_chainsValidation['crls'] as $dss_crl) {
-			// if(!empty($dss_crl)) {
-				// $DSS_crls=$this->create_object();
-				// $DSS_crls->set_stream("======================dss_crl $i ==============", false);
-				// $dss_object['Crls']->push(new PDFValueReference($DSS_crls->get_oid()));
-				// $i++;
-			// }
-		// }
-		// $i=0;
-		// foreach($cert_chainsValidation['ocsps'] as $dss_ocsp) {
-			// if(!empty($dss_ocsp)) {
-				// $DSS_ocsp=$this->create_object();
-				// $DSS_ocsp->set_stream("======================dss_ocsp $i ==============", false);
-				// $dss_object['OCSPs']->push(new PDFValueReference($DSS_ocsp->get_oid()));
-				// $i++;
-			// }
-		// }
-
-
-
 
         if (!isset($root_obj["DSS"]))
             $root_obj["DSS"] =  new PDFValueReference($dss_object->get_oid());

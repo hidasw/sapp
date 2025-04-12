@@ -83,18 +83,39 @@ class PDFSignatureObject extends PDFObject {
      * Constructs the object and sets the default values needed to sign
      * @param oid the oid for the object
      */
-    public function __construct($oid) {
+    public function __construct($oid, $timestamp_placeholder=false) {
         $this->_prev_content_size = 0;
         $this->_post_content_size = null;
-        parent::__construct($oid, [
+        if($timestamp_placeholder) {
+            $fields = [
+            'Type' => "/DocTimeStamp",
             'Filter' => "/Adobe.PPKLite",
-            'Type' => "/Sig",
-            // 'SubFilter' => "/adbe.pkcs7.detached",
-            'SubFilter' => "/ETSI.CAdES.detached",
-            'ByteRange' => new PDFValueSimple(str_repeat(" ", __BYTERANGE_SIZE)),
+            'SubFilter' => "/ETSI.RFC3161",
             'Contents' => "<" . str_repeat("0", __SIGNATURE_MAX_LENGTH) . ">",
-            'M' => new PDFValueString(timestamp_to_pdfdatestring()),
-        ]);
+            'ByteRange' => new PDFValueSimple(str_repeat(" ", __BYTERANGE_SIZE)),
+            //'M' => new PDFValueString(timestamp_to_pdfdatestring()),
+            //'Name' => "()",
+            //'Type' => "/DocTimeStamp",
+
+            //'SubFilter' => "/ETSI.RFC3161",
+            //'Filter' => "/Adobe.PPKLite",
+            //'ByteRange' => new PDFValueSimple(str_repeat(" ", __BYTERANGE_SIZE)),
+            //'M' => new PDFValueString(timestamp_to_pdfdatestring()),
+            //'Name' => "()",
+            //'Contents' => "<" . str_repeat("0", __SIGNATURE_MAX_LENGTH) . ">",
+            ];
+        } else {
+            $fields = [
+				'Filter' => "/Adobe.PPKLite",
+				'Type' => "/Sig",
+				// 'SubFilter' => "/adbe.pkcs7.detached",
+				'SubFilter' => "/ETSI.CAdES.detached",
+				'ByteRange' => new PDFValueSimple(str_repeat(" ", __BYTERANGE_SIZE)),
+				'Contents' => "<" . str_repeat("0", __SIGNATURE_MAX_LENGTH) . ">",
+				'M' => new PDFValueString(timestamp_to_pdfdatestring()),
+            ];
+        }
+        parent::__construct($oid, $fields);
     }
     /**
      * Function used to add some metadata fields to the signature: name, reason of signature, etc.
